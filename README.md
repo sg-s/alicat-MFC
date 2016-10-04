@@ -55,6 +55,7 @@ m = MFC
 
 * Updating flow setpoint: ~8 ms
 * Reading default frame: ~9 ms
+* Lag between updating setpoint and MFC achieving setpoint (parameter dependent): ~95 ms
 
 # Installation 
 

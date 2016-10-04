@@ -104,11 +104,8 @@ classdef MFC < handle
 			assert(value>=0,'Setpoint must be positive')
 			assert(value<=m.max_flow_rate,'Setpoint exceeds maximum flow rate')
 			a = 64000*(value/m.max_flow_rate);
-			tic
 			fprintf(m.fid,[m.name,num2str(a)]);
 			m.set_point = value;
-			t=toc;
-			disp(round(t*1000))
 		end
 
 		function m = set.P(m,value)
