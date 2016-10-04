@@ -1,7 +1,9 @@
-function [] = readFrame(m)
-tic
+function [pressure,temperature,flow_rate] = readFrame(m)
+
 fprintf(m.fid,m.name); 
 a = fscanf(m.fid);
-disp(a)
-t = toc;
-disp(t*1000)
+
+a = strsplit(a,' ');
+pressure = str2double(a{2});
+temperature = str2double(a{3});
+flow_rate = str2double(a{5});

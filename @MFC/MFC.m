@@ -1,7 +1,8 @@
 classdef MFC < handle
 
 	properties
-		port ='/dev/tty.usbserial-FT02WKAF'; % which USB port to use?
+		%port ='/dev/tty.usbserial-FT02WKAF'; % which USB port to use? this works on macOS
+		port ='COM3'
 		fid % file ID to port
 
 		% communication parameters
@@ -19,9 +20,10 @@ classdef MFC < handle
 
 		temperature 
 		pressure
+		flow_rate
 
 		set_point
-		flow_rate
+		
 
 		
 
@@ -39,14 +41,14 @@ classdef MFC < handle
 		function m = MFC()
 			
 			cprintf('green','[INFO] ')
-			cprintf('text','Connecting to Alicats on port %s\n',m.port)
+			cprintf('text','Connecting to Alicat MFC on port %s\n',m.port)
 
 			m.fid = serial(m.port,'TimeOut', 2,'BaudRate', m.baud_rate, 'Terminator','CR');
 
 			try
 				fopen(m.fid)
 			catch
-				cprintf('red','[ERR] ')
+				cprintf('red','[FATAL] ')
                 cprintf('text','Could not open the port you specified. Probably the wrong port.\n')
                 return
 			end
@@ -91,6 +93,10 @@ classdef MFC < handle
 
 		end
 
+		function v = get.flow_rate(m)
+			[~,~,v] = readFrame(m);
+		end
+
 		function m = set.set_point(m,value)
 			assert(isscalar(value),'Setpoint must be a single value')
 			assert(~isnan(value),'Setpoint must be a number')
@@ -98,8 +104,11 @@ classdef MFC < handle
 			assert(value>=0,'Setpoint must be positive')
 			assert(value<=m.max_flow_rate,'Setpoint exceeds maximum flow rate')
 			a = 64000*(value/m.max_flow_rate);
+			tic
 			fprintf(m.fid,[m.name,num2str(a)]);
 			m.set_point = value;
+			t=toc;
+			disp(round(t*1000))
 		end
 
 		function m = set.P(m,value)
