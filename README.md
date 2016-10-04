@@ -1,5 +1,7 @@
 # alicat MFC 
 
+![](./images/hero.jpg)
+
 MATLAB class to control Alicat MFCs over a USB port. 
 
 # Usage
