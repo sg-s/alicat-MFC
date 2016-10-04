@@ -28,6 +28,12 @@ Change the setpoint to 100mL/min
 m.set_point = 100;
 ```
 
+View the current (actual) flow rate
+
+```matlab
+m.flow_rate
+```
+
 View serial number, model number, and other parameters:
 
 ```matlab
