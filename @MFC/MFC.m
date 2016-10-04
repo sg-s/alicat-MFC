@@ -4,9 +4,12 @@ classdef MFC < handle
 		port ='/dev/tty.usbserial-FT02WKAF'; % which USB port to use?
 		fid % file ID to port
 
+		% communication parameters
+		baud_rate = 19200
+
 		verbosity = 10;
 
-		% name of MFC (this is the alhabetic identifier of the MFC, usually "A")
+		% name of MFC (this is the alhabetic identifier of the MFC, usually "A". You can change this on the MFC)
 		name = 'A';
 
 		% MFC parameters
@@ -17,7 +20,19 @@ classdef MFC < handle
 		temperature 
 		pressure
 
+		set_point
+		flow_rate
+
+		
+
 	end % end properties 
+
+	properties (SetAccess = immutable)
+		% machine info
+		model_number
+		serial_number
+		max_flow_rate
+	end
 
 	methods
 
@@ -26,7 +41,7 @@ classdef MFC < handle
 			cprintf('green','[INFO] ')
 			cprintf('text','Connecting to Alicats on port %s\n',m.port)
 
-			m.fid = serial(m.port,'TimeOut', 2,'BaudRate', 19200, 'Terminator','CR');
+			m.fid = serial(m.port,'TimeOut', 2,'BaudRate', m.baud_rate, 'Terminator','CR');
 
 			try
 				fopen(m.fid)
@@ -36,7 +51,37 @@ classdef MFC < handle
                 return
 			end
 
-			m.getMFCParameters;
+			pause(1)
+			m = getMFCParameters(m);
+
+			
+			% get manufacturer info
+			fprintf(m.fid,[m.name '??M*']);
+			for i = 1:10
+				t = fscanf(m.fid);
+				a = strfind(t,'Model Number');
+				if any(a)
+					m.model_number = strtrim(t(a+12:end));
+				end
+
+				a = strfind(t,'Serial Number');
+				if any(a)
+					m.serial_number = str2double(t(a+14:end));
+				end
+			end
+
+			% get the data frame bounds to determine max setpoint
+			% get manufacturer info
+			fprintf(m.fid,[m.name, '??D*']);
+			for i = 1:15
+				t = fscanf(m.fid);
+				if any(strfind(t,'SetPoint'))
+					a = strfind(t,'+');
+					a = a(end);
+					z = strfind(t,'SCCM');
+					m.max_flow_rate = str2double(t(a+1:z-1));
+				end
+			end
 
 			if ~nargout
                 cprintf('red','[WARN] ')
@@ -44,6 +89,17 @@ classdef MFC < handle
                 assignin('base','m',m);
             end
 
+		end
+
+		function m = set.set_point(m,value)
+			assert(isscalar(value),'Setpoint must be a single value')
+			assert(~isnan(value),'Setpoint must be a number')
+			assert(~isinf(value),'Setpoint must be finite')
+			assert(value>=0,'Setpoint must be positive')
+			assert(value<=m.max_flow_rate,'Setpoint exceeds maximum flow rate')
+			a = 64000*(value/m.max_flow_rate);
+			fprintf(m.fid,[m.name,num2str(a)]);
+			m.set_point = value;
 		end
 
 		function m = set.P(m,value)
