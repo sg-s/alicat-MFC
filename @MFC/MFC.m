@@ -1,16 +1,16 @@
 classdef MFC < handle
 
 	properties
-		%port ='/dev/tty.usbserial-FT02WKAF'; % which USB port to use? this works on macOS
-		port ='COM3'
+		port ='/dev/tty.usbserial-FT02WKAF'; % which USB port to use? this works on macOS
+		%port ='COM3'
 		fid % file ID to port
 
 		% communication parameters
 		baud_rate = 19200
 
-		verbosity = 10;
+		verbosity = 0
 
-		% name of MFC (this is the alhabetic identifier of the MFC, usually "A". You can change this on the MFC)
+		% name of MFC (this is the alphabetic identifier of the MFC, usually "A". You can change this on the MFC)
 		name = 'A';
 
 		% MFC parameters
@@ -24,6 +24,12 @@ classdef MFC < handle
 
 		set_point
 		
+		% PID tuning parameters
+		acceptable_error = 3 % in units of mL/min 
+		P_range = [400 1000];
+		D_range = [5e3 1e4];
+		nsteps_P = 9;
+		nsteps_D = 10; 
 
 		
 
@@ -122,6 +128,105 @@ classdef MFC < handle
 			setMFCParameters(m,'I',value);
 			m.I = value;
         end 
+
+        function [flow_rate] = run(m,time,setpoints)
+        	% measures flow from MFC while applying setpoints defined by time and setpoint vector
+        	real_time = NaN(max(time)*1e3,1);
+        	flow_rate = NaN(max(time)*1e3,1);
+        	c = 0;
+        	tic;
+        	t = toc;
+        	while t < max(time)
+        		m.set_point = setpoints(find(time>t,1,'first'));
+        		c = c + 1;
+        		real_time(c) = t;
+        		flow_rate(c) = m.flow_rate;
+        		t = toc;
+        	end
+        	flow_rate = interp1(real_time(1:c),flow_rate(1:c),time);
+        end
+
+        function [] = tunePID(m)
+        	% make the ranges of PID values
+        	all_P = round(logspace(log10(m.P_range(1)),log10(m.P_range(2)),m.nsteps_P));
+        	all_D = round(logspace(log10(m.D_range(1)),log10(m.D_range(2)),m.nsteps_D));
+        	tau_on = NaN(m.nsteps_P,m.nsteps_D);
+        	tau_off = NaN(m.nsteps_P,m.nsteps_D);
+
+        	tolerance = m.acceptable_error;
+
+        	figure('outerposition',[0 0 800 500],'PaperUnits','points','PaperSize',[1000 500]); hold on
+        	p1 = plot(NaN,NaN,'k');
+        	p2 = plot(NaN,NaN,'r');
+        	p3 = plot(NaN,NaN,'b--');
+        	p4 = plot(NaN,NaN,'b--');
+
+        	for i = 1:length(all_P)
+        		m.P = all_P(i);
+        		for j = 1:length(all_D)
+        			m.D = all_D(j);
+
+        			% estimate response time
+        			time = linspace(0,3,3e3);
+        			setpoints = 5/2+0*time;
+        			setpoints(1e3:2e3) = 250;
+
+        			[flow_rate] = run(m,time,setpoints);
+        			err = abs(setpoints-flow_rate);
+        			temp = find(err(1e3+1:2e3) > tolerance,1,'last');
+        			if ~isempty(temp)
+        				tau_on(i,j) = temp;
+        			end
+        			temp = find(err(2e3+1:end) > tolerance,1,'last');
+        			if ~isempty(temp)
+        				tau_off(i,j) = temp;
+        			end
+
+        			p1.XData = time;
+        			p2.XData = time;
+        			p1.YData = setpoints;
+        			p2.YData = flow_rate;
+
+        			p3.XData = 1+1e-3*[tau_on(i,j) tau_on(i,j)];
+        			p3.YData = [0 500];
+
+        			p4.XData = 2+1e-3*[tau_off(i,j) tau_off(i,j)];
+        			p4.YData = [0 500];
+
+        			title(['P = ' oval(all_P(i)) ' D = ' oval(all_D(j))])
+
+        			drawnow
+
+
+        		end
+        	end
+
+        	figure('outerposition',[0 0 500 500],'PaperUnits','points','PaperSize',[1000 500]);
+        	tau = max(cat(3,tau_on,tau_off),[],3);
+        	h = heatmap(all_D, all_P,tau);
+        	h.Colormap = parula;
+        	
+        	title('Worst-case response times (ms)')
+        	xlabel('D')
+        	ylabel('P')
+
+        	prettyFig;
+        	
+        	% find best values
+        	[r,c]=find(tau == min(min(tau)));
+        	
+        	disp('The best P/D values are:')
+        	disp(['P = ' oval(all_P(r))])
+        	disp(['D = ' oval(all_D(c))])
+
+        	m.P = all_P(r);
+        	m.D = all_D(c);
+
+        	% update P_ and D_range
+        	m.P_range = [all_P(r)/2 all_P(r)*2];
+        	m.D_range = [all_D(c)/2 all_D(c)*2];
+
+        end % end tunePID
 
 		function delete(m)
             if m.verbosity > 5

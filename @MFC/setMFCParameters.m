@@ -13,11 +13,12 @@ if isnan(value)
 	return
 end
 
-assert(value<20000,'Value too high: for safety, only values up to 20,000 are allowed')
+assert(value<=20000,'Value too high: for safety, only values up to 20,000 are allowed')
 assert(value>=0,'Value too low: must be positive')
 
-
-disp('setMFCParameters called')
+if m.verbosity > 5
+	disp('setMFCParameters called')
+end
 
 switch param
 	case 'P'
