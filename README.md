@@ -6,7 +6,9 @@ MATLAB class to control Alicat MFCs over a USB port.
 
 # Usage
 
-Create a MFC object:
+First, determine which port your MFC appears on. To do this, you might have to plug the device in and out, reboot your machine, or scan `/dev/`. 
+
+Once you are convinced your computer can see the MFC, switch to MATLAB and create a MFC object:
 
 ```matlab
 m = MFC;
@@ -58,6 +60,14 @@ m = MFC
     serial_number: 91686
     max_flow_rate: 500
 ````
+
+Find the best P and D parameters so that the MFC can reach a setpoint in the shortest possible time: 
+
+```
+m.tunePID;
+```
+
+![](images/tune-pid.png)
 
 # Performance 
 
