@@ -26,7 +26,7 @@ classdef MFC < handle
 		
 		% PID tuning parameters
 		acceptable_error = 3 % in units of mL/min 
-		P_range = [400 1000];
+		P_range = [400 3000];
 		D_range = [5e3 1e4];
 		nsteps_P = 9;
 		nsteps_D = 10; 
