@@ -193,7 +193,7 @@ classdef MFC < handle
         			p4.XData = 2+1e-3*[tau_off(i,j) tau_off(i,j)];
         			p4.YData = [0 500];
 
-        			title(['P = ' oval(all_P(i)) ' D = ' oval(all_D(j))])
+        			title(['P = ' mat2str(all_P(i)) ' D = ' mat2str(all_D(j))])
 
         			drawnow
 
@@ -216,8 +216,8 @@ classdef MFC < handle
         	[r,c]=find(tau == min(min(tau)));
         	
         	disp('The best P/D values are:')
-        	disp(['P = ' oval(all_P(r))])
-        	disp(['D = ' oval(all_D(c))])
+        	disp(['P = ' mat2str(all_P(r))])
+        	disp(['D = ' mat2str(all_D(c))])
 
         	m.P = all_P(r);
         	m.D = all_D(c);
